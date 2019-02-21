@@ -1,50 +1,83 @@
+#Last update: 2019.02.12
+#Remember to run redis otherwise it will get stuck n redisConnect
+
+
+MODE_REQUIRE_API_KEY=TRUE;
+MODE_REQUIRE_SESSION=TRUE;
+MODE_REQUIRE_SESSION_DATA=FALSE;
+
+LONG_RUN_STATUS_READY<-0
+LONG_RUN_STATUS_DONE<-1
+LONG_RUN_STATUS_ERROR<- -1
+
+MODEL_DESCRIPTION<-"This is an exemplary model for PRISM tutorial"
+MODEL_VERSION<-"2019.02.15"
+
+#' @export
+test<-function(func,...)
+{
+  return(jsonlite::toJSON("Hi"))
+}
+
+
+
+#DEPRECATED
 #' @export
 gateway_json<-function(func,...)
 {
   f<-get(func)
   out<-f(...)
-
+  
   return(jsonlite::toJSON(out))
 }
+
+
+
+#' @export
+prism_model_run<-function(model_input)
+{
+  return(model_run(model_input))
+}
+
+
 
 #' @export
 gateway_json0<-function(func)
 {
-
+  check_access(func=func)
   f<-get(func)
   out<-f()
-
+  
   return(jsonlite::toJSON(out))
 }
 
 #' @export
 gateway_json1<-function(func,parms1)
 {
-  #code<-parse(text=paste(func,"(",parms,")"))
-  #out<-eval(code)
-
+  check_access(func=func)
   f<-get(func)
   out<-f(parms1)
-
+  
   return(jsonlite::toJSON(out))
 }
 
 #' @export
 gateway_json2<-function(func,parms1,parms2)
 {
+  check_access(func=func)
   f<-get(func)
   out<-f(parms1,parms2)
-
+  
   return(jsonlite::toJSON(out))
 }
-
 
 #' @export
 gateway_json3<-function(func,parms1,parms2,parms3)
 {
+  check_access(func=func)
   f<-get(func)
   out<-f(parms1,parms2,parms3)
-
+  
   return(jsonlite::toJSON(out))
 }
 
@@ -55,47 +88,50 @@ gateway_json3<-function(func,parms1,parms2,parms3)
 
 
 #' @export
-gateway_json0_s<-function(session,func)
+gateway_json0_s<-function(session_id,func)
 {
-  session<<-session
-  restore_session(session)
+  check_access(session_id,func)
+  session_id<<-session_id
+  restore_session(session_id)
   f<-get(func)
   out<-f()
-  save_session(session)
+  save_session(session_id)
   return(jsonlite::toJSON(out))
 }
 
 #' @export
-gateway_json1_s<-function(session,func,parms1)
+gateway_json1_s<-function(session_id,func,parms1)
 {
-  session<<-session
-  restore_session(session)
+  check_access(session_id,func)
+  session_id<<-session_id
+  restore_session(session_id)
   f<-get(func)
   out<-f(parms1)
-  save_session(session)
+  save_session(session_id)
   return(jsonlite::toJSON(out))
 }
 
 #' @export
-gateway_json2_s<-function(session,func,parms1,parms2)
+gateway_json2_s<-function(session_id,func,parms1,parms2)
 {
-  session<<-session
-  restore_session(session)
+  check_access(session_id,func)
+  session_id<<-session_id
+  restore_session(session_id)
   f<-get(func)
   out<-f(parms1,parms2)
-  save_session(session)
+  save_session(session_id)
   return(jsonlite::toJSON(out))
 }
-
 
 #' @export
-gateway_json3_s<-function(session,func,parms1,parms2,parms3)
+gateway_json3_s<-function(session_id,func,parms1,parms2,parms3)
 {
-  session<<-session
-  restore_session(session)
+  check_access(session_id,func)
+  session_id<<-session_id
+  restore_session(session_id)
   f<-get(func)
   out<-f(parms1,parms2,parms3)
-  save_session(session)
+  save_session(session_id)
   return(jsonlite::toJSON(out))
 }
 
@@ -108,8 +144,9 @@ gateway_json3_s<-function(session,func,parms1,parms2,parms3)
 
 
 
-save_session<-function(session)
+save_session<-function(session_id)
 {
+  if(!MODE_REQUIRE_SESSION_DATA) return()
   rredis::redisConnect()
   e<-new.env()
   for(nm in names(globalenv()))
@@ -125,6 +162,7 @@ save_session<-function(session)
 
 restore_session<-function(session)
 {
+  if(!MODE_REQUIRE_SESSION_DATA) return()
   rredis::redisConnect()
   e<-rredis::redisGet(session)
   for(nm in names(e))
@@ -141,43 +179,176 @@ restore_session<-function(session)
 
 
 
-connect<-function(model_name,settings)
+
+connect_to_model<-function(model_name,api_key)
 {
-  session<-paste(c("a",sample(c(letters,LETTERS,paste(0:9)),15)),collapse="")
-  return(session)
-}
-
-
-
-
-
-
-
-
-#' @export
-get_default_input<-function()
-{
-  return(init_input()$values)
-}
-
-
-
-
-#' @export
-model_run<-function(input)
-{
-  init_session()
-  run(input = input)
-  out<-Cget_output()
-  terminate_session()
+  out<-list(result=TRUE,session_id="",version="",description="")
+  
+  if(MODE_REQUIRE_API_KEY)
+  {
+    if(is.null(api_key))
+    {
+      out$result<-FALSE
+      out$description<-"Error: access to the model requires a valid API key."
+      return(out)
+    }
+    res<-get_access(model_name,api_key)
+    if(res==FALSE)
+    {
+      out$result<-FALSE
+      out$description<-"Error: Onvalid API key."
+      return(out)
+    }
+  }
+  
+  if(MODE_REQUIRE_SESSION)
+  {
+    session_id<-generate_session_id()
+    set_redis_var(session_id,value = model_name)
+    out$session_id<-session_id
+  }
+  
+  out$description<-MODEL_DESCRIPTION
   return(out)
 }
 
 
 
 
+
+
+disconnect_from_model<-function()
+{
+  if(!is.null(session_id) && session_id!="")
+  {
+    delete_redis_var(session_id)
+    return(TRUE)
+  }
+  else
+  {
+    warning("This was not a sessioned connection. Nothing to disconnet")
+    return(FALSE)
+  }
+}
+
+
+
+
+
+
+#Gets access to the model by checking api key. Returns true of successful, false otherwise
+get_access<-function(model_name,api_key)
+{
+  if(api_key=="123456") return(TRUE);
+  return(FALSE);
+}
+
+
+
+#Checks if the submitted session_id has the privilge to access the model. This is done by checking if (session_id,model_name) ecists in redis
+check_access<-function(session_id="", func=NULL)
+{
+  if(MODE_REQUIRE_SESSION==FALSE) return(TRUE)
+  if(session_id=="" && func=="connect_to_model") return(TRUE)
+  x<-get_redis_var(session_id)
+  if(!is.null(x)) return(TRUE)
+  stop("ERROR: Unauthorized access.")
+}
+
+
+generate_session_id<-function()
+{
+  id<-paste(c(sample(LETTERS,1) , sample(c(LETTERS,0:9),9,TRUE)),collapse="")
+  return(id)
+}
+
+
+
+
+
+
+
+
+
+
+
+
 #' @export
-get_output_structure<-function()
+model_run.long<-function(input)
+{
+  if(is.null(session_id) || session_id=="")
+    stop("Error: long run is not available as this is a session-less connection")
+  
+  key<-paste(session_id,"status",sep=":")
+  
+  if(get_redis_var(key))
+  {
+    #There is already a job for this session in the que!
+    return(FALSE)
+  }
+  else
+    set_redis_var(key,0)
+  
+  return(TRUE)
+}
+
+
+
+
+
+
+
+
+
+#' @export
+prism_check_run_progress<-function()
+{
+  if(is.null(session_id) || session_id=="")
+    stop("Error: long run is not available as this is a session-less connection")
+  
+  key<-paste(session_id,"status",sep=":")
+  
+  val<-get_redis_var(key)
+  
+  if(val)
+  {
+    return(val)
+  }
+  else
+    return(FALSE)
+}
+
+
+
+
+
+
+
+
+
+
+
+#This function is called by model code in a different R process. sesssion_infor should be passed from one process to another.
+#' @export
+prism_set_run_progress<-function(value)
+{
+  if(is.null(session_id) || session_id=="")
+    stop("Error: long run is not available as this is a session-less connection")
+  
+  key<-paste(session_id,"status",sep=":")
+  
+  set_redis_var(key,value)
+}
+
+
+
+
+
+
+
+
+#' @export
+prism_get_output_structure<-function()
 {
   out<-list(
     n_agents=prism_output(source="$n_agents", type = "numeric/scalar", group = "", title = "Number of simulated individuals", description = ""),
@@ -198,19 +369,28 @@ get_output_structure<-function()
 
 ####################Redis example
 
-set_redis<-function(variable,value)
+set_redis_var<-function(variable,value)
 {
+  #TODO: connect should not be in these functions as it will cause multiple connection attempts!
   rredis::redisConnect()
   rredis::redisSet(variable,value)
-  return(0)
+  return(TRUE)
 }
 
 
-get_redis<-function(variable)
+get_redis_var<-function(variable)
 {
   rredis::redisConnect()
   x<-rredis::redisGet(variable)
   return(x)
+}
+
+
+
+delete_redis_var<-function(variable)
+{
+  rredis::redisConnect()
+  rredis::redisDelete(variable)
 }
 
 
@@ -256,210 +436,18 @@ get_var<-function(variable)
 
 
 
-###################Prism objects#################
-#Version 2018.11.04
-
-prism_input_types<-c("numeric/scalar","numeric/vector","numeric/matrix","string/scalar","string/vector","string/matrix","file/csv")
-
-#' @export
-prism_input <- function(value, type="", group="", default=NULL, range=c(NULL,NULL), title="", description="", control="")
-{
-  me <- list(
-    value=value,
-    type = type,
-    default = default,
-    range=range,
-    title=title,
-    description=description,
-    control=control
-  )
-
-  if(type=="")  me$type<-guess_prism_input_type(me)
-
-  ## Set the name for the class
-  class(me) <- append(class(me),"prism_input")
-  return(me)
-}
 
 
 
-guess_prism_input_type<-function(p_inp)
-{
-  if(is.numeric(p_inp$value)) type="numeric" else type="string"
-  if(is.vector(p_inp$value)) {if(length(p_inp$value)<=1) type<-paste(type,"/scalar",sep="") else type<-paste(type,"/vector",sep="")}
-  if(is.matrix(p_inp$value)) {type<-paste(type,"/matrix",sep="")}
-  return(type)
-}
+#######################################LONG RUN functions###############
+#This is just a placeholder. These functions should not be here!
 
-
-
-
-
-
-
-print <- function(x)
-{
-  UseMethod("print",x)
-}
-print.prism_input<-function(x)
-{
-  print.listof(x)
-}
-
-
-
-Ops<-function(e1,e2)
-{
-  UseMethod("Ops",x)
-}
-Ops.prism_input<-function(e1,e2)
-{
-  source<-NULL;
-  dest<-NULL;
-  if(sum(class(e1)=="prism_input")>0) {source<-e1; e1<-e1$value}
-  if(sum(class(e2)=="prism_input")>0) {dest<-e2; e2<-e2$value}
-  val<-NextMethod(.Generic)
-  if(is.null(source)) return(val) else {source$value<-val; return(source)}
-}
-
-
-Math<-function(x,...)
-{
-  UseMethod("Math",x,...)
-}
-Math.prism_input<-function(x,...)
-{
-  source<-NULL;
-  dest<-NULL;
-  if(sum(class(x)=="prism_input")>0) {source<-x; x<-x$value}
-  val<-NextMethod(.Generic)
-  if(is.null(source)) return(val) else {source$value<-val; return(source)}
-}
-
-
-
-Summary<-function(...,na.rm)
-{
-  UseMethod("Summary",...,na.rm)
-}
-
-#' @export
-Summary.prism_input<-function(...,na.rm)
-{
-  message("hi")
-  args<-list(...)
-  args <- lapply(args, function(x) {
-    if(sum(class(x)=="prism_input")>0) x$value
-  })
-  do.call(.Generic, c(args, na.rm = na.rm))
-}
-
-
-
-#' @export
-canbe_prism_input<-function(...)
-{
-  y<-prism_input(0)
-  xn<-sort(names(...))
-  yn<-sort(names(y))
-  if(length(xn)==length(yn) && sum(xn==yn)==length(xn)) return(T) else return(F)
-}
-
-
-#' @export
-to_prism_input<-function(x)
-{
-  if(is.list(x))
+#browses through rredis for all <session_id:staus,0> pairs and call model run
+prism_patrol<-function()
+  
+  
+  
+  model_run.long<-function(session_id)
   {
-    out<-prism_input(value=x$value)
-    for(nm in names(out))
-      if(!is.null(x[nm])) out[nm]<-x[nm]
-      return(out)
+    
   }
-  return(prism_input(x))
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-prism_output_types<-c("numeric/scalar","numeric/vector","numeric/matrix","string/scalar","string/vector","string/matrix","file/csv","graphic/url","graphic/data")
-#' @export
-prism_output <- function(title="", type="numeric", source="", group="", value=NULL, description="")
-{
-  me <- list(
-    type = type,
-    source = source,
-    group=group,
-    value=value,
-    title=title,
-    description=description
-  )
-
-  ## Set the name for the class
-  class(me) <- append(class(me),"prism_output")
-  return(me)
-}
-
-
-
-
-
-#' @export
-as.prism_output<-function(...)
-{
-  x<-list(...)[[1]]
-  out<-prism_output()
-  for(i in 1:length(x))
-  {
-    if(length(x[[i]])>0) out[names(x)[i]]<-x[[i]]
-  }
-  return(out)
-}
-
-#' @export
-canbe_prism_output<-function(...)
-{
-  y<-prism_output()
-  xn<-sort(names(...))
-  yn<-sort(names(y))
-  if(length(xn)==length(yn) && sum(xn==yn)==length(xn)) return(T) else return(F)
-}
-
-#' @export
-to_prism_output<-function(x)
-{
-  if(is.list(x))
-  {
-    out<-prism_output()
-    for(nm in names(out))
-      if(!is.null(x[nm])) out[nm]<-x[nm]
-      return(out)
-  }
-  return(prism_output(x))
-}
-
-
-
-#' @export
-print.prism_output<-function(x)
-{
-  if(length(x$value)>100) x$value=paste("[Data of length",length(x$value),"]")
-  dput(unclass(x))
-}
-
-
-
-
-
-
