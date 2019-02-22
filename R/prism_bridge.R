@@ -1,7 +1,12 @@
 model_run<-function(model_input)
 {
+  init_session()
   res<-epicR::run(input=unflatten_list(model_input))
-  return(toJSON(res))
+  terminate_session()
+  if(res==0)
+    return(flatten_list(Cget_output()))
+  else
+    return(list(result=FALSE))
 }
 
 
@@ -24,6 +29,7 @@ get_output_structure<-function()
 #Gets a hierarchical named list and flattens it; updating names accordingly
 flatten_list<-function(lst,prefix="")
 {
+  if(is.null(lst)) return(lst)
   out<-list()
   for(i in 1:length(lst))
   {
@@ -50,6 +56,7 @@ flatten_list<-function(lst,prefix="")
 #Gets a hierarchical named list and flattens it; updating names accordingly
 unflatten_list<-function(lst)
 {
+  if(is.null(lst)) return(lst)
   out<-list()
   
   nms<-names(lst)
