@@ -10,7 +10,7 @@ LONG_RUN_STATUS_READY<-0
 LONG_RUN_STATUS_DONE<-1
 LONG_RUN_STATUS_ERROR<- -1
 
-MODEL_DESCRIPTION<-"This is an exemplary model for PRISM tutorial"
+MODEL_DESCRIPTION<-"This is EPIC - PRISM enable!"
 MODEL_VERSION<-"2019.02.15"
 
 #' @export
@@ -249,7 +249,7 @@ get_access<-function(model_name,api_key)
 check_access<-function(session_id="", func=NULL)
 {
   if(MODE_REQUIRE_SESSION==FALSE) return(TRUE)
-  if(session_id=="" && func=="connect_to_model") return(TRUE)
+  if(session_id=="" || func=="connect_to_model") return(TRUE)
   x<-get_redis_var(session_id)
   if(!is.null(x)) return(TRUE)
   stop("ERROR: Unauthorized access.")
