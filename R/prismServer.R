@@ -1,7 +1,9 @@
 #Last update: 2019.02.12
 #Remember to run redis otherwise it will get stuck n redisConnect
 
-
+REDIS_ADDRESS="prism.resp.core.ubc.ca"
+REDIS_PORT <- 3001
+ 
 MODE_REQUIRE_API_KEY=TRUE;
 MODE_REQUIRE_SESSION=TRUE;
 MODE_REQUIRE_SESSION_DATA=FALSE;
@@ -11,7 +13,12 @@ LONG_RUN_STATUS_DONE<-1
 LONG_RUN_STATUS_ERROR<- -1
 
 MODEL_DESCRIPTION<-"This is EPIC - PRISM enable!"
-MODEL_VERSION<-"2019.02.15"
+MODEL_VERSION<- packageVersion('epicPrism')
+
+
+connect_redis_prism <- function (){
+  rredis::redisConnect(host = REDIS_ADDRESS, port = REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+}
 
 #' @export
 test<-function(func,...)
@@ -147,7 +154,7 @@ gateway_json3_s<-function(session_id,func,parms1,parms2,parms3)
 save_session<-function(session_id)
 {
   if(!MODE_REQUIRE_SESSION_DATA) return()
-  rredis::redisConnect()
+  connect_redis_prism()
   e<-new.env()
   for(nm in names(globalenv()))
   {
@@ -163,7 +170,7 @@ save_session<-function(session_id)
 restore_session<-function(session)
 {
   if(!MODE_REQUIRE_SESSION_DATA) return()
-  rredis::redisConnect()
+  connect_redis_prism()
   e<-rredis::redisGet(session)
   for(nm in names(e))
   {
@@ -372,7 +379,7 @@ prism_get_output_structure<-function()
 set_redis_var<-function(variable,value)
 {
   #TODO: connect should not be in these functions as it will cause multiple connection attempts!
-  rredis::redisConnect()
+  connect_redis_prism()
   rredis::redisSet(variable,value)
   return(TRUE)
 }
@@ -380,7 +387,7 @@ set_redis_var<-function(variable,value)
 
 get_redis_var<-function(variable)
 {
-  rredis::redisConnect()
+  connect_redis_prism()
   x<-rredis::redisGet(variable)
   return(x)
 }
@@ -389,7 +396,7 @@ get_redis_var<-function(variable)
 
 delete_redis_var<-function(variable)
 {
-  rredis::redisConnect()
+  connect_redis_prism()
   rredis::redisDelete(variable)
 }
 
