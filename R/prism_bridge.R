@@ -2,13 +2,28 @@ model_run<-function(model_input)
 {
   init_session()
   res<-epicR::run(input=unflatten_list(model_input))
+  output_ex<<-Cget_output_ex()
+  
+  plot(output_ex$n_alive_by_ctime_sex[,1],type='l',col='red')
+  lines(output_ex$n_alive_by_ctime_sex[,1],type='l',col='green')
+  
+  data(cars)
+  plot(cars)
+  
   terminate_session()
   if(res==0)
-    return(flatten_list(Cget_output()))
+    return(c(flatten_list(Cget_output()),Cget_output_ex()))
   else
     return(list(result=FALSE))
 }
 
+
+
+#' @export
+get_output_ex<-function()
+{
+  return(output_ex)
+}
 
 
 

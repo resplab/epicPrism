@@ -1,24 +1,29 @@
 #Last update: 2019.02.12
-#Remember to run redis otherwise it will get stuck n redisConnect
+#Remember to run redis otherwise it will get stuck on redisConnect
 
-REDIS_ADDRESS="prism.resp.core.ubc.ca"
-REDIS_PORT <- 3001
+
+thisSession<-new.env()
+
+
+thisSession$REDIS_ADDRESS="prism.resp.core.ubc.ca"
+thisSession$REDIS_PORT <- 3001
  
-MODE_REQUIRE_API_KEY=TRUE;
-MODE_REQUIRE_SESSION=TRUE;
-MODE_REQUIRE_SESSION_DATA=FALSE;
+thisSession$MODE_REQUIRE_API_KEY=TRUE;
+thisSession$MODE_REQUIRE_SESSION=TRUE;
+thisSession$MODE_REQUIRE_SESSION_DATA=TRUE;
 
-LONG_RUN_STATUS_READY<-0
-LONG_RUN_STATUS_DONE<-1
-LONG_RUN_STATUS_ERROR<- -1
+thisSession$LONG_RUN_STATUS_READY<-0
+thisSession$LONG_RUN_STATUS_DONE<-1
+thisSession$LONG_RUN_STATUS_ERROR<- -1
 
-MODEL_DESCRIPTION<-"This is EPIC - PRISM enable!"
-MODEL_VERSION<- packageVersion('epicPrism')
-
+thisSession$MODEL_DESCRIPTION<-"This is EPIC - PRISM enabled!"
+thisSession$MODEL_VERSION<- packageVersion('epicPrism')
 
 connect_redis_prism <- function (){
-  rredis::redisConnect(host = REDIS_ADDRESS, port = REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  rredis::redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
 }
+
+
 
 #' @export
 test<-function(func,...)
@@ -153,7 +158,7 @@ gateway_json3_s<-function(session_id,func,parms1,parms2,parms3)
 
 save_session<-function(session_id)
 {
-  if(!MODE_REQUIRE_SESSION_DATA) return()
+  if(!thisSession$MODE_REQUIRE_SESSION_DATA) return()
   connect_redis_prism()
   e<-new.env()
   for(nm in names(globalenv()))
@@ -163,15 +168,19 @@ save_session<-function(session_id)
       e[[nm]]<-globalenv()[[nm]]
     }
   }
-  rredis::redisSet(session,e)
+  rredis::redisSet(paste(session_id,"env",sep=":"),e)
 }
 
 
-restore_session<-function(session)
+
+
+
+
+restore_session<-function(session_id)
 {
-  if(!MODE_REQUIRE_SESSION_DATA) return()
+  if(!thisSession$MODE_REQUIRE_SESSION_DATA) return()
   connect_redis_prism()
-  e<-rredis::redisGet(session)
+  e<-rredis::redisGet(paste(session_id,"env",sep=":"))
   for(nm in names(e))
   {
     if(typeof(e[[nm]])!='closure')
@@ -191,7 +200,7 @@ connect_to_model<-function(model_name,api_key)
 {
   out<-list(result=TRUE,session_id="",version="",description="")
   
-  if(MODE_REQUIRE_API_KEY)
+  if(thisSession$MODE_REQUIRE_API_KEY)
   {
     if(is.null(api_key))
     {
@@ -203,19 +212,19 @@ connect_to_model<-function(model_name,api_key)
     if(res==FALSE)
     {
       out$result<-FALSE
-      out$description<-"Error: Onvalid API key."
+      out$description<-"Error: invalid API key."
       return(out)
     }
   }
   
-  if(MODE_REQUIRE_SESSION)
+  if(thisSession$MODE_REQUIRE_SESSION)
   {
     session_id<-generate_session_id()
     set_redis_var(session_id,value = model_name)
     out$session_id<-session_id
   }
   
-  out$description<-MODEL_DESCRIPTION
+  out$description<-thisSession$MODEL_DESCRIPTION
   return(out)
 }
 
@@ -228,7 +237,11 @@ disconnect_from_model<-function()
 {
   if(!is.null(session_id) && session_id!="")
   {
-    delete_redis_var(session_id)
+    connect_redis_prism()
+    keys<-rredis::redisKeys(pattern = paste(session_id,"*",sep=""))
+    rredis::redisDelete(keys)
+    #To prevent recording of this session environment by the calling gateway.
+    thisSession$MODE_REQUIRE_SESSION_DATA<-FALSE
     return(TRUE)
   }
   else
@@ -255,7 +268,7 @@ get_access<-function(model_name,api_key)
 #Checks if the submitted session_id has the privilge to access the model. This is done by checking if (session_id,model_name) ecists in redis
 check_access<-function(session_id="", func=NULL)
 {
-  if(MODE_REQUIRE_SESSION==FALSE) return(TRUE)
+  if(thisSession$MODE_REQUIRE_SESSION==FALSE) return(TRUE)
   if(session_id=="" || func=="connect_to_model") return(TRUE)
   x<-get_redis_var(session_id)
   if(!is.null(x)) return(TRUE)
