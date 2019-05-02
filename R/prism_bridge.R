@@ -1,7 +1,26 @@
 model_run<-function(model_input)
 {
-  init_session()
-  res<-epicR::run(input=unflatten_list(model_input))
+  input<-unflatten_list(model_input)
+  
+  debug<-input$debug
+  input$debug<-NULL
+  
+  settings<-epicR::get_default_settings()
+  new_settings<-input$settings
+  
+  l<-length(new_settings)
+  if(l>0)
+    for(i in 1:l)
+    {
+      settings[names(new_settings[i])]<-new_settings[[i]]
+    }
+  
+  input$settings<-NULL
+  
+  init_session(settings=settings)
+  
+  res<-epicR::run(input=input)
+  
   output_ex<<-Cget_output_ex()
   
   plot(output_ex$n_alive_by_ctime_sex[,1],type='l',col='red')
@@ -11,10 +30,26 @@ model_run<-function(model_input)
   plot(cars)
   
   terminate_session()
-  if(res==0)
-    return(c(flatten_list(Cget_output()),Cget_output_ex()))
+  
+  if(!is.null(debug$input_back) && debug$input_back==1)
+  {
+    input_back<-list()
+    input_back$settings<-Cget_settings()
+    input_back$inputs<-Cget_inputs()
+    
+    if(res==0)
+      return(c(flatten_list(Cget_output()),Cget_output_ex(),flatten_list(input_back)))
+    else
+      return(c(list(result=FALSE),flatten_list(input_back)))
+    
+  }
   else
-    return(list(result=FALSE))
+  {
+    if(res==0)
+      return(c(flatten_list(Cget_output()),Cget_output_ex()))
+    else
+      return(list(result=FALSE))
+  }
 }
 
 
@@ -46,9 +81,17 @@ flatten_list<-function(lst,prefix="")
 {
   if(is.null(lst)) return(lst)
   out<-list()
+  if(length(lst)==0)
+  {
+    out[prefix]<-NULL
+    return(out)
+  }
+    
   for(i in 1:length(lst))
   {
     nm<-names(lst[i])
+    
+    message(nm)
     
     if(prefix!="")  nm<-paste(prefix,nm,sep=".")
     
