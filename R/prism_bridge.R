@@ -36,7 +36,7 @@ model_run<-function(model_input)
     input_back<-list()
     input_back$setting<-Cget_settings()
     input_back$input<-Cget_inputs()
-    
+
     if(res==0)
       return(c(flatten_list(Cget_output()),Cget_output_ex(),flatten_list(input_back)))
     else
