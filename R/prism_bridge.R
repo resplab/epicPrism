@@ -15,7 +15,7 @@ model_run<-function(model_input)
       settings[names(new_settings[i])]<-new_settings[[i]]
     }
   
-  input$settings<-NULL
+  input$setting<-NULL
   
   init_session(settings=settings)
   
