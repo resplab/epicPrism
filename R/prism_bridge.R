@@ -38,17 +38,17 @@ model_run<-function(model_input)
     input_back$input<-Cget_inputs()
 
     if(res==0)
-      return(c(flatten_list(Cget_output()),Cget_output_ex(),flatten_list(input_back)))
+      return(c(status=0,flatten_list(Cget_output()),Cget_output_ex(),flatten_list(input_back)))
     else
-      return(c(list(result=FALSE),flatten_list(input_back)))
+      return(c(list(status=paste(as.vector(epicR::get_errors()),sep="+",collapse = ".")),flatten_list(input_back)))
     
   }
   else
   {
     if(res==0)
-      return(c(flatten_list(Cget_output()),Cget_output_ex()))
+      return(c(status=0,flatten_list(Cget_output()),Cget_output_ex()))
     else
-      return(list(result=FALSE))
+      return(list(status=paste(as.vector(epicR::get_errors()),sep="+",collapse = ".")))
   }
 }
 
