@@ -6,7 +6,7 @@ model_run<-function(model_input)
   input$debug<-NULL
   
   settings<-epicR::get_default_settings()
-  new_settings<-input$settings
+  new_settings<-input$setting
   
   l<-length(new_settings)
   if(l>0)
