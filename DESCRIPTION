@@ -1,6 +1,6 @@
 Package: epicPrism
 Title: R Package for Evaluation Platform in COPD with Prism
-Version: 1.5.0
+Version: 1.6.0
 Authors@R: c(
     person("Mohsen", "Sadatsafavi", email = "mohsen.sadatsafavi@ubc.ca", role = c("aut", "cph")),
     person("Amin", "Adibi", email = "adibi@alumni.ubc.ca", role = c("aut", "cre")))
@@ -15,5 +15,3 @@ Imports:
     jsonlite,
     rredis
 RoxygenNote: 6.1.1
-Suggests:
-    testthat

@@ -2,46 +2,97 @@
 #Remember to run redis otherwise it will get stuck on redisConnect
 
 
+
+get_my_name<-function()
+{
+  x<-getPackageName()
+  return(x)
+}
+
+
+
 thisSession<-new.env()
 
+thisSession$redis_connection_status<-0
 
 thisSession$REDIS_ADDRESS="prism.resp.core.ubc.ca"
 thisSession$REDIS_PORT <- 3001
  
 thisSession$MODE_REQUIRE_API_KEY=TRUE;
-thisSession$MODE_REQUIRE_SESSION=TRUE;
-thisSession$MODE_REQUIRE_SESSION_DATA=TRUE;
+thisSession$MODE_REQUIRE_SESSION=FALSE;
+thisSession$MODE_REQUIRE_SESSION_DATA=FALSE;
 
 thisSession$LONG_RUN_STATUS_READY<-0
 thisSession$LONG_RUN_STATUS_DONE<-1
 thisSession$LONG_RUN_STATUS_ERROR<- -1
 
-thisSession$MODEL_DESCRIPTION<-"This is EPIC - PRISM enabled!"
-thisSession$MODEL_VERSION<- packageVersion('epicPrism')
+thisSession$MODEL_DESCRIPTION<-paste0("This is ",get_my_name()," - PRISM enabled!")
+thisSession$MODEL_VERSION<-paste(packageVersion(get_my_name()))
 
 connect_redis_prism <- function (){
-  rredis::redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  if(thisSession$redis_connection_status==0)
+  {
+    rredis::redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+    thisSession$redis_connection_status<-1
+  }
 }
 
 
 
+
 #' @export
-test<-function(func,...)
+test<-function(...)
 {
-  return(jsonlite::toJSON("Hi"))
+  return(get_my_name())
 }
 
 
 
-#DEPRECATED
+
+#FOR ONE SHOT JSON CALL!
+#Can authenticate the user either by API key or by a session_id. 
 #' @export
-gateway_json<-function(func,...)
+gateway<-function(...)
 {
-  f<-get(func)
-  out<-f(...)
+  arguments=list(...)
+  
+  func<-arguments$func
+  
+  session_id<-arguments$session_id
+  api_key<-arguments$api_key
+  
+  if(is.null(session_id)) session_id=""
+  if(is.null(api_key)) api_key=""
+  
+  if(func!="test") check_access(api_key,session_id,func)
+  
+  #try(
+  #{
+      set_redis_var(paste("RT:LastModelCall:",api_key,sep=""),get_my_name())
+      set_redis_var(paste("RT:LastCallTime:",api_key,sep=""),Sys.time())
+      rredis::redisIncr(paste("RT:CallCount:",api_key,sep=""))
+      rredis::redisRPush(paste("RT:CallTimes:",api_key,sep=""),Sys.time())
+  #})
+
+  session_id<<-session_id
+  
+  arguments$func<-NULL
+  arguments$api_key<-NULL
+  arguments$session_id<-NULL
+  
+  if(!is.null(session_id)) restore_session(session_id)
+  
+  if(length(arguments)==0) 
+  {out<-eval(parse(text=paste(func,"()")))}
+  else 
+  {out<-eval(parse(text=paste(func,substring(deparse(arguments),5))))}
+  
+  if(!is.null(session_id)) save_session(session_id)
   
   return(jsonlite::toJSON(out))
 }
+
+
 
 
 
@@ -50,106 +101,6 @@ prism_model_run<-function(model_input)
 {
   return(model_run(model_input))
 }
-
-
-
-#' @export
-gateway_json0<-function(func)
-{
-  check_access(func=func)
-  f<-get(func)
-  out<-f()
-  
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json1<-function(func,parms1)
-{
-  check_access(func=func)
-  f<-get(func)
-  out<-f(parms1)
-  
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json2<-function(func,parms1,parms2)
-{
-  check_access(func=func)
-  f<-get(func)
-  out<-f(parms1,parms2)
-  
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json3<-function(func,parms1,parms2,parms3)
-{
-  check_access(func=func)
-  f<-get(func)
-  out<-f(parms1,parms2,parms3)
-  
-  return(jsonlite::toJSON(out))
-}
-
-
-
-
-
-
-
-#' @export
-gateway_json0_s<-function(session_id,func)
-{
-  check_access(session_id,func)
-  session_id<<-session_id
-  restore_session(session_id)
-  f<-get(func)
-  out<-f()
-  save_session(session_id)
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json1_s<-function(session_id,func,parms1)
-{
-  check_access(session_id,func)
-  session_id<<-session_id
-  restore_session(session_id)
-  f<-get(func)
-  out<-f(parms1)
-  save_session(session_id)
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json2_s<-function(session_id,func,parms1,parms2)
-{
-  check_access(session_id,func)
-  session_id<<-session_id
-  restore_session(session_id)
-  f<-get(func)
-  out<-f(parms1,parms2)
-  save_session(session_id)
-  return(jsonlite::toJSON(out))
-}
-
-#' @export
-gateway_json3_s<-function(session_id,func,parms1,parms2,parms3)
-{
-  check_access(session_id,func)
-  session_id<<-session_id
-  restore_session(session_id)
-  f<-get(func)
-  out<-f(parms1,parms2,parms3)
-  save_session(session_id)
-  return(jsonlite::toJSON(out))
-}
-
-
-
-
 
 
 
@@ -195,24 +146,19 @@ restore_session<-function(session_id)
 
 
 
-
-connect_to_model<-function(model_name,api_key)
+#In API-based use without session ids this might seem a bit reduntant (it will not be required). But still good to check model availability
+connect_to_model<-function(api_key="")
 {
-  out<-list(result=TRUE,session_id="",version="",description="")
+  model_name<-environmentName(environment(connect_to_model))
+  out<-list(error_code=0,session_id="",version="",description="")
   
   if(thisSession$MODE_REQUIRE_API_KEY)
   {
     if(is.null(api_key))
     {
-      out$result<-FALSE
+      out$error_code<--1
+      out$version<-"1234"
       out$description<-"Error: access to the model requires a valid API key."
-      return(out)
-    }
-    res<-get_access(model_name,api_key)
-    if(res==FALSE)
-    {
-      out$result<-FALSE
-      out$description<-"Error: invalid API key."
       return(out)
     }
   }
@@ -224,6 +170,7 @@ connect_to_model<-function(model_name,api_key)
     out$session_id<-session_id
   }
   
+  out$version<-thisSession$MODEL_VERSION
   out$description<-thisSession$MODEL_DESCRIPTION
   return(out)
 }
@@ -246,7 +193,7 @@ disconnect_from_model<-function()
   }
   else
   {
-    warning("This was not a sessioned connection. Nothing to disconnet")
+    warning("This was not a sessioned connection. Nothing to disconnet.")
     return(FALSE)
   }
 }
@@ -256,29 +203,38 @@ disconnect_from_model<-function()
 
 
 
-#Gets access to the model by checking api key. Returns true of successful, false otherwise
-get_access<-function(model_name,api_key)
+
+
+
+#Checks if the submitted api_key has the privilge to access the model. 
+#Currently only authenticates based on api_key
+check_access<-function(api_key="", session_id="", func=NULL)
 {
-  if(api_key=="123456") return(TRUE);
-  return(FALSE);
+  if(thisSession$MODE_REQUIRE_API_KEY==FALSE) return(TRUE)
+  if(api_key=="") stop("ERROR: API key is required.")
+  
+  #try({
+    #set_redis_var(paste("MODEL_ACCESS/",get_my_name(),":",api_key,sep=""),"kooni")
+    x<-get_redis_var(paste("MT:Access:",get_my_name(),":",api_key,sep=""))
+    if(is.null(x)) stop("ERROR: Unauthorized access.")
+    if(is.numeric(x))
+    {
+      if(x>0) return(TRUE)
+      stop(paste("Access denied - code:",x))
+    }
+    stop(paste("Access denied:",x))
+  #})
 }
 
 
 
-#Checks if the submitted session_id has the privilge to access the model. This is done by checking if (session_id,model_name) ecists in redis
-check_access<-function(session_id="", func=NULL)
-{
-  if(thisSession$MODE_REQUIRE_SESSION==FALSE) return(TRUE)
-  if(session_id=="" || func=="connect_to_model") return(TRUE)
-  x<-get_redis_var(session_id)
-  if(!is.null(x)) return(TRUE)
-  stop("ERROR: Unauthorized access.")
-}
+
+
 
 
 generate_session_id<-function()
 {
-  id<-paste(c(sample(LETTERS,1) , sample(c(LETTERS,0:9),9,TRUE)),collapse="")
+  id<-paste(c(sample(letters,1) , sample(c(letters,0:9),9,TRUE)),collapse="")
   return(id)
 }
 

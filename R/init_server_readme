@@ -1,0 +1,10 @@
+#How to get this read
+
+devtools::install_github("Aminadibi/epicR",force=T)
+
+#No longer needed if using server redis!
+system(shQuote("E:/C/Program Files/redis-2.4.5-win32-win64/64bit/redis-server.exe"),wait=FALSE)
+
+library("opencpu")
+
+opencpu::ocpu_start_server()

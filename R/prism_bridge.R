@@ -1,4 +1,4 @@
-model_run<-function(model_input)
+model_run<-function(model_input = NULL)
 {
   input<-unflatten_list(model_input)
   
