@@ -83,9 +83,10 @@ gateway<-function(...)
   if(!is.null(session_id)) restore_session(session_id)
   
   if(length(arguments)==0) 
-  {out<-eval(parse(text=paste(func,"()")))}
+    {out<-eval(parse(text=paste(func,"()")))}
   else 
-  {out<-eval(parse(text=paste(func,substring(deparse(arguments),5))))}
+    {out<-do.call(func, args = arguments)}
+  #{out<-eval(parse(text=paste(func,substring(deparse(arguments),5))))}
   
   if(!is.null(session_id)) save_session(session_id)
   
