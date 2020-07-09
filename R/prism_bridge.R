@@ -65,6 +65,7 @@ get_output_ex<-function()
 get_default_input<-function()
 {
   model_input<-init_input()$values
+  model_input$setting <- get_default_settings()
   return(flatten_list(model_input))
 }
 
