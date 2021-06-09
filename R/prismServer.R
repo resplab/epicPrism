@@ -15,6 +15,10 @@ thisSession$LONG_RUN_STATUS_READY<-0
 thisSession$LONG_RUN_STATUS_DONE<-1
 thisSession$LONG_RUN_STATUS_ERROR<- -1
 
+thisSession$redis_connection_status<-0  #0:not connected; 1:connected
+thisSession$REDIS_ADDRESS <- ""
+thisSession$REDIS_PORT <- NULL
+
 thisSession$MODEL_DESCRIPTION<-paste0("This is ",get_my_name()," - PRISM enabled!")
 thisSession$MODEL_VERSION<-paste(packageVersion(get_my_name()))
 
@@ -49,6 +53,45 @@ gateway<-function(...)
 }
 
 
+
+
+#' @export
+gateway_async<-function(...)
+{
+  token <- generate_token()
+  
+  arguments=list(...)
+  func<-arguments$func
+  
+  session_id<-arguments$session_id
+  
+  if(is.null(session_id)) session_id=""
+  
+  session_id<<-session_id
+  
+  arguments$func<-NULL
+  arguments$api_key<-NULL
+  arguments$session_id<-NULL
+  
+  token <- generate_token()
+  
+  status <-
+  
+  redisset(paste0("AS:status:",token),"[READY]")
+  redisset(paste0("AS:status_time:",token),Sys.time())
+  redisset(paste0("AS:status_data:",token),
+           list(model_name=get_my_name())
+           )
+  
+  out <- list(token=token)
+
+  return(jsonlite::toJSON(out))
+}
+
+
+
+
+
 #' @export
 prism_model_run<-function(model_input=NULL)
 {
@@ -80,6 +123,15 @@ generate_session_id<-function()
   id<-paste(c(sample(letters,1) , sample(c(letters,0:9),9,TRUE)),collapse="")
   return(id)
 }
+
+
+
+generate_token<-function()
+{
+  id<-paste(c(sample(letters,1) , sample(c(letters,0:9),9,TRUE)),collapse="")
+  return(id)
+}
+
 
 
 #' @export
