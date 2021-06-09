@@ -75,8 +75,6 @@ gateway_async<-function(...)
   
   token <- generate_token()
   
-  status <-
-  
   redisset(paste0("AS:status:",token),"[READY]")
   redisset(paste0("AS:status_time:",token),Sys.time())
   redisset(paste0("AS:status_data:",token),
