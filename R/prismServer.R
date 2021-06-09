@@ -15,9 +15,9 @@ thisSession$LONG_RUN_STATUS_READY<-0
 thisSession$LONG_RUN_STATUS_DONE<-1
 thisSession$LONG_RUN_STATUS_ERROR<- -1
 
-thisSession$redis_connection_status<-0  #0:not connected; 1:connected
-thisSession$REDIS_ADDRESS <- ""
-thisSession$REDIS_PORT <- NULL
+thisSession$redis_connection_status <- 0  #0:not connected; 1:connected
+thisSession$REDIS_ADDRESS = "captain.cp.prism-ubc.linaralabs.com"
+thisSession$REDIS_PORT <- 3001
 
 thisSession$MODEL_DESCRIPTION<-paste0("This is ",get_my_name()," - PRISM enabled!")
 thisSession$MODEL_VERSION<-paste(packageVersion(get_my_name()))
@@ -75,11 +75,13 @@ gateway_async<-function(...)
   
   token <- generate_token()
   
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
   redisset(paste0("AS:status:",token),"[READY]")
   redisset(paste0("AS:status_time:",token),Sys.time())
   redisset(paste0("AS:status_data:",token),
            list(model_name=get_my_name())
            )
+  redisClose()
   
   out <- list(token=token)
 

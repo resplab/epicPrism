@@ -12,5 +12,6 @@ Encoding: UTF-8
 LazyData: true
 Imports:
     epicR,
-    jsonlite
-RoxygenNote: 7.1.0
+    jsonlite,
+    rredis
+RoxygenNote: 7.1.1
