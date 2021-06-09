@@ -80,10 +80,10 @@ gateway_async<-function(...)
   redisSet(paste0("AS:status_time:",token), Sys.time())
   redisSet(paste0("AS:status_data:",token),
            list(model_name=get_my_name())
-           )
+          )
   redisClose()
   
-  out <- list(token=token)
+  out <- list(token=token, error_code=0)
 
   return(jsonlite::toJSON(out))
 }
