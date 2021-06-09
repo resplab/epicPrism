@@ -79,7 +79,10 @@ gateway_async<-function(...)
   redisSet(paste0("AS:status:",token),"[READY]")
   redisSet(paste0("AS:status_time:",token), Sys.time())
   redisSet(paste0("AS:status_data:",token),
-           list(model_name=get_my_name())
+           list(model_name=get_my_name(),
+                func=func,
+                arguments=arguments
+                )
           )
   redisClose()
   
