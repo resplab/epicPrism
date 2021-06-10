@@ -56,7 +56,7 @@ gateway<-function(...)
 
 
 #' @export
-gateway_async<-function(...)
+gatewayasync<-function(...)
 {
   token <- generate_token()
   
