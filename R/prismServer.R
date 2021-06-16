@@ -169,3 +169,28 @@ get_var<-function(variable)
 }
 
 
+
+
+prism_get_async_results <- function(token=NULL)
+{
+  if(is.null(token))
+  {
+    stop("Token was not provided.")
+    return()
+  }
+  
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  
+  status <- redisGet(paste0("AS:status:",token))
+  if(is.null(status))
+  {
+    stop("Job with this token not found.")
+  }
+  status_data <- redisGet(paste0("AS:status_data:",token))
+  
+  redisClose()
+  
+  return(list(status=status,status_data=status_data))
+}
+
+
