@@ -15,6 +15,10 @@ thisSession$LONG_RUN_STATUS_READY<-0
 thisSession$LONG_RUN_STATUS_DONE<-1
 thisSession$LONG_RUN_STATUS_ERROR<- -1
 
+thisSession$redis_connection_status <- 0  #0:not connected; 1:connected
+thisSession$REDIS_ADDRESS = "captain.cp.prism-ubc.linaralabs.com"
+thisSession$REDIS_PORT <- 3001
+
 thisSession$MODEL_DESCRIPTION<-paste0("This is ",get_my_name()," - PRISM enabled!")
 thisSession$MODEL_VERSION<-paste(packageVersion(get_my_name()))
 
@@ -47,6 +51,48 @@ gateway<-function(...)
   
   return(jsonlite::toJSON(out))
 }
+
+
+
+
+#' @export
+gatewayasync<-function(...)
+{
+  token <- generate_token()
+  
+  arguments=list(...)
+  func<-arguments$func
+  
+  session_id<-arguments$session_id
+  
+  if(is.null(session_id)) session_id=""
+  
+  session_id<<-session_id
+  
+  arguments$func<-NULL
+  arguments$api_key<-NULL
+  arguments$session_id<-NULL
+  
+  token <- generate_token()
+  
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  redisSet(paste0("AS:status:",token),"[READY]")
+  redisSet(paste0("AS:status_time:",token), Sys.time())
+  redisSet(paste0("AS:status_data:",token),
+           list(model_name=get_my_name(),
+                func=func,
+                arguments=arguments
+                )
+          )
+  redisClose()
+  
+  out <- list(token=token, error_code=0)
+
+  return(jsonlite::toJSON(out))
+}
+
+
+
 
 
 #' @export
@@ -82,6 +128,15 @@ generate_session_id<-function()
 }
 
 
+
+generate_token<-function()
+{
+  id<-paste(c(sample(letters,1) , sample(c(letters,0:9),9,TRUE)),collapse="")
+  return(id)
+}
+
+
+
 #' @export
 prism_get_output_structure<-function()
 {
@@ -111,6 +166,31 @@ set_var<-function(variable,value)
 get_var<-function(variable)
 {
   return(.GlobalEnv[[variable]])
+}
+
+
+
+
+prism_get_async_results <- function(token=NULL)
+{
+  if(is.null(token))
+  {
+    stop("Token was not provided.")
+    return()
+  }
+  
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  
+  status <- redisGet(paste0("AS:status:",token))
+  if(is.null(status))
+  {
+    stop("Job with this token not found.")
+  }
+  status_data <- redisGet(paste0("AS:status_data:",token))
+  
+  redisClose()
+  
+  return(list(status=status,status_data=status_data))
 }
 
 
