@@ -179,7 +179,7 @@ prism_get_async_results <- function(token=NULL)
     return()
   }
   
-  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = Sys.getenv("REDIS_PASSWORD"))
   
   status <- redisGet(paste0("AS:status:",token))
   if(is.null(status))
