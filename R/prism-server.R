@@ -17,7 +17,7 @@ thisSession$LONG_RUN_STATUS_ERROR<- -1
 
 thisSession$redis_connection_status <- 0  #0:not connected; 1:connected
 thisSession$REDIS_ADDRESS = "srv-captain--persistent-redis"
-thisSession$REDIS_PORT <- 3001
+thisSession$REDIS_PORT <- 6379
 
 thisSession$MODEL_DESCRIPTION<-paste0("This is ",get_my_name()," - PRISM enabled!")
 thisSession$MODEL_VERSION<-paste(packageVersion(get_my_name()))
@@ -180,7 +180,7 @@ prism_get_async_results <- function(token=NULL)
     return()
   }
   
-  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = "H1Uf5o6326n6C2276m727cU82O")
+  redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = Sys.getenv("REDIS_PASSWORD"))
   
   status <- redisGet(paste0("AS:status:",token))
   if(is.null(status))

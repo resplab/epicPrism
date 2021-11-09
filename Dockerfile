@@ -1,4 +1,5 @@
 FROM opencpu/base
+RUN apt-get update
 RUN apt-get install -y libcurl4-gnutls-dev
 RUN R -e 'install.packages("survminer")'
 RUN R -e 'install.packages("remotes")'
