@@ -77,6 +77,7 @@ gatewayasync<-function(...)
   
   redisConnect(host = thisSession$REDIS_ADDRESS, port = thisSession$REDIS_PORT, password = Sys.getenv("REDIS_PASSWORD"))
   redisSet(paste0("AS:status:",token),"[READY]")
+  redisSet(paste0("AS:status_email:",token), email_address)
   redisSet(paste0("AS:status_time:",token), Sys.time())
   redisSet(paste0("AS:status_data:",token),
            list(model_name=get_my_name(),
