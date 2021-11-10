@@ -87,7 +87,7 @@ gatewayasync<-function(...)
           )
   redisClose()
   
-  out <- list(token=token, error_code=0)
+  out <- list(token=token, email_address=email_address, error_code=0)
 
   return(jsonlite::toJSON(out))
 }
