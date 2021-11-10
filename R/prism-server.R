@@ -62,7 +62,7 @@ gatewayasync<-function(...)
   
   arguments=list(...)
   func<-arguments$func
-  
+  email_address <- arguments$email_address
   session_id<-arguments$session_id
   
   if(is.null(session_id)) session_id=""
